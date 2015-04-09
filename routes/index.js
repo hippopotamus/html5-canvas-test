@@ -1,9 +1,18 @@
 var express = require('express');
 var router = express.Router();
+module.exports = function(io){
+  var router = express.Router();
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
-});
+  io.on('connection', function(socket){
+    console.log('a user connected');
+    socket.on('disconnect', function(){
+      console.log('user disconnected');
+    });
+  });
 
-module.exports = router;
+  router.get('/', function(req, res, next) {
+    res.render('index', { title: 'Express' });
+  });
+
+  return router;
+}

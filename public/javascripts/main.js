@@ -2,6 +2,7 @@ var ctx, bgImage, then, canvas
 var keysDown = {}
 var bgReady = false
 
+var socket = io();
 $(document).ready(function() {
 
   bgImage = new Image()
