@@ -41,7 +41,6 @@ function syncPosition(otherPlayer) {
   setInterval(function() {
     socket.on('playerPosition', function(coordinates) {
       otherPlayer.coordinates = coordinates
-      // console.log("yo")
     })
   }, 15)
 }
