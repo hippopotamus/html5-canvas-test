@@ -5,8 +5,8 @@ module.exports = function(io){
 
   io.on('connection', function(socket){
     console.log('a user connected');
-    socket.on('playerPosition', function(player) {
-      socket.broadcast.emit('playerPosition', player)
+    socket.on('playerPosition', function(coordinates) {
+      socket.broadcast.emit('playerPosition', coordinates)
     })
     socket.on('disconnect', function(){
       console.log('user disconnected');
