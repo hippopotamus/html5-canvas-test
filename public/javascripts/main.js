@@ -1,30 +1,35 @@
-var ctx, bgImage, then, canvas, player, other
+var ctx, bgImage, then, canvas, player
 var keysDown = {}
 var bgReady = false
-
+var playersArray = []
 var socket = io()
 
-var hero = {
-  image: new Image(),
-  speed: 256,
-  coordinates: {"x": 0, "y": 0}
+function Player() {
+  this.name = "",
+  this.image = new Image(),
+  this.image.src = "/images/hero.png"
+  this.speed = 256,
+  this.coordinates = {x: 0, y: 0}
 }
 
-var asshole = {
-  image: new Image(),
-  speed: 256,
-  coordinates: {"x": 0, "y": 0}
+function addPlayer(player) {
+  playersArray.push(player)
+  socket.emit('addPlayer', player.name)
 }
 
-function reset() {
-  hero.coordinates.x = canvas.width / 3
-  hero.coordinates.y = canvas.height / 3
-  asshole.coordinates.x = canvas.width / 1.5
-  asshole.coordinates.y = canvas.height / 1.5
+socket.on('addPlayer', function(playerName){
+  var p = new Player()
+  p.name = playerName
+  reset(p)
+  playersArray.push(p)
+})
 
+function reset(player) {
+  player.coordinates.x = canvas.width / 3
+  player.coordinates.y = canvas.height / 3
 }
 
-function update(modifier) {
+function update(modifier, player) {
   (function(player){
     if(37 in keysDown && player.coordinates.x > 32) { player.coordinates.x -= player.speed * modifier }
     if(38 in keysDown && player.coordinates.y > 32) { player.coordinates.y -= player.speed * modifier }
@@ -34,21 +39,43 @@ function update(modifier) {
 }
 
 function broadcastPosition(player) {
-  setInterval(function() { socket.emit('playerPosition', player.coordinates) }, 15)
+  setInterval(function() {
+    socket.emit('playerPosition', {name: player.name, coordinates: player.coordinates})
+  }, 15)
 }
 
-function syncPosition(otherPlayer) {
+function syncPosition(playersArray) {
   setInterval(function() {
-    socket.on('playerPosition', function(coordinates) {
-      otherPlayer.coordinates = coordinates
+    socket.on('playerPosition', function(moveInfo) {
+      var ran = false
+      for(person in playersArray) {
+        if(playersArray[person].name == moveInfo.name) {
+          playersArray[person].coordinates = moveInfo.coordinates
+          ran = true
+          break
+        }
+      }
+      if(ran === false) {
+        console.log('yo')
+        var p = new Player()
+        p.name = moveInfo.name
+        reset(p)
+        playersArray.push(p)
+      }
     })
   }, 15)
 }
 
 function render() {
   ctx.drawImage(bgImage, 0, 0)
-  ctx.drawImage(hero.image, hero.coordinates.x, hero.coordinates.y)
-  ctx.drawImage(asshole.image, asshole.coordinates.x, asshole.coordinates.y)
+  // ctx.drawImage(player.image, player.coordinates.x, player.coordinates.y)
+  for(person in playersArray) {
+    ctx.drawImage(
+      playersArray[person].image,
+      playersArray[person].coordinates.x,
+      playersArray[person].coordinates.y
+    )
+  }
 
   ctx.fillStyle = "rgb(250, 250, 250)"
   ctx.font = "24px Inconsolata"
@@ -56,25 +83,24 @@ function render() {
   ctx.textBaseline = "top"
 }
 
-function main(player) {
+function main() {
   requestAnimationFrame(main)
   var now = Date.now();
   if(then) {
     var delta = now - then;
-    update(delta / 1000);
+    update(delta / 1000, player);
     render();
   }
   then = now;
 }
 
-$(document).ready(function() {
-  var yo = confirm('sup')
-  yo ? (player = hero) && (other = asshole) : (player = asshole) && (other = hero)
+window.onload = function() {
+  var namePrompt = prompt('enter name')
+  player = new Player()
+  player.name = namePrompt
   bgImage = new Image()
   bgImage.src = "/images/background.png"
-  hero.image.src = "/images/hero.png"
-  asshole.image.src = "/images/hero.png"
-
+  addPlayer(player)
   canvas = $('#canvas')[0]
   ctx = canvas.getContext("2d")
 
@@ -85,8 +111,13 @@ $(document).ready(function() {
   $(document).keyup(function(e) {
     delete keysDown[e.keyCode]
   })
-  reset()
+  reset(player)
   broadcastPosition(player)
-  syncPosition(other)
+  syncPosition(playersArray)
   main(player)
-})
+  // setInterval(function(){
+  //   for(i in playersArray){
+  //     console.log(playersArray[i])
+  //   }
+  // }, 1000)
+}
